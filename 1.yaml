@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-secret
+data:
+  key: c2VjcmV0
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-config-map
+data:
+  config-1: value1
+  config-2: value2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: my-app
+        image: gcr.io/qwiklabs-gcp-04-13d0a6e21aa2/my-ser:1.0.0
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - configMapRef:
+            name: my-config-map
+        env:
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: my-secret
+              key: key
+        volumeMounts:
+        - name: my-config-map
+          mountPath: /etc/config
+        - name: my-secret
+          mountPath: /etc/secret
+      volumes:
+      - name: my-config-map
+        configMap:
+          name: my-config-map
+      - name: my-secret
+        secret:
+          secretName: my-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app
+  labels:
+    app: my-app
+spec:
+  selector:
+    app: my-app
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  type: ClusterIP
+---
